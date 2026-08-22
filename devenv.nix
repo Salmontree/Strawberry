@@ -11,6 +11,11 @@
 
 	packages = [
 		pkgs.sdl3
+		pkgs.vulkan-loader
+	];
+
+	env.LD_LIBRARY_PATH = lib.makeLibraryPath [
+		pkgs.vulkan-loader
 	];
 
 	scripts.build-debug.exec = ''
@@ -23,7 +28,8 @@
 	'';
 
 	scripts.run.exec = ''
-		build-debug
-		./build/debug/strawberry
+		if build-debug; then
+			./build/debug/strawberry
+		fi
 	'';
 }

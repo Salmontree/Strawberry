@@ -3,65 +3,65 @@ package window
 
 import "core:strings"
 import "core:log"
-import "vendor:sdl3"
-import gl "vendor:OpenGL"
+import "lib:wgpu"
+import "lib:wgpu/sdl3glue"
+import SDL "vendor:sdl3"
 
-SDL3State :: struct {
-	window: ^sdl3.Window,
-	ctx: sdl3.GLContext,
-	should_quit: bool
+@(private="file")
+State :: struct {
+	window: ^SDL.Window,
+	should_quit: bool,
 }
 
 sdl3_create_window :: proc(width: int, height: int, title: string) -> (window: Window, ok: bool) {
-	if !sdl3.Init({.VIDEO}) do return {}, false
-	state := new(SDL3State); if state == nil do return {}, false
+	if !SDL.Init({.VIDEO}) do return {}, false
+	state := new(State); if state == nil do return {}, false
 
-	sdl3.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
-	sdl3.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
-	sdl3.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl3.GLProfile.CORE))
-
-	if state.window = sdl3.CreateWindow(strings.clone_to_cstring(title, context.temp_allocator), i32(width), i32(height), { .RESIZABLE, .OPENGL }); state.window == nil do return {}, false
-	sdl3.SetWindowMinimumSize(state.window, 720, 480)
-	state.ctx = sdl3.GL_CreateContext(state.window); sdl3.GL_MakeCurrent(state.window, state.ctx)
+	if state.window = SDL.CreateWindow(strings.clone_to_cstring(title, context.temp_allocator), i32(width), i32(height), { .RESIZABLE }); state.window == nil do return {}, false
+	SDL.SetWindowMinimumSize(state.window, 720, 480)
 	state.should_quit = false
-
-	gl.load_up_to(3, 3, sdl3.gl_set_proc_address)
-
-	w, h: i32; sdl3.GetWindowSizeInPixels(state.window, &w, &h)
-	gl.Viewport(0, 0, w, h)
 
 	return {
 		state=state,
 
-		destroy = proc(window: Window) {
+		get_framebuffer_size = proc(window: ^Window) -> (width, height: u32) {
+			state := (^State)(window.state)
+			w, h: i32; SDL.GetWindowSizeInPixels(state.window, &w, &h)
+			return u32(w), u32(h)
+		},
+		get_surface = proc(window: ^Window, instance: wgpu.Instance) -> wgpu.Surface {
+			state := (^State)(window.state)
+			return sdl3glue.GetSurface(instance, state.window)
+		},
+
+		destroy = proc(window: ^Window) {
 			log.info("Destroying window")
-			state := (^SDL3State)(window.state)
-			sdl3.GL_DestroyContext(state.ctx)
-			sdl3.DestroyWindow(state.window)
-			sdl3.Quit()
+			state := (^State)(window.state)
+			SDL.DestroyWindow(state.window)
+			SDL.Quit()
 			free(state)
 		},
 
-		poll_events = proc(window: Window) {
-			state := (^SDL3State)(window.state)
-			event: sdl3.Event
-			for sdl3.PollEvent(&event) {
+		poll_events = proc(window: ^Window) {
+			state := (^State)(window.state)
+			event: SDL.Event
+			for SDL.PollEvent(&event) {
 				#partial switch event.type {
 					case .QUIT: state.should_quit = true
-					case .WINDOW_RESIZED:
-						w, h: i32; sdl3.GetWindowSizeInPixels(state.window, &w, &h)
-						gl.Viewport(0, 0, w, h)
+					case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
+						if window.on_resize != nil do window.on_resize()
+						else do log.warn("No resize callback")
 				}
 			}
 		},
 
-		present_screen = proc(window: Window) {
-			state := (^SDL3State)(window.state)
-			sdl3.GL_SwapWindow(state.window)
+		present_screen = proc(window: ^Window) {
+			state := (^State)(window.state)
+			SDL.GL_SwapWindow(state.window)
 		},
 
-		should_quit = proc(window: Window) -> bool {
-			state := (^SDL3State)(window.state)
+		should_quit = proc(window: ^Window) -> bool {
+			state := (^State)(window.state)
 			return state.should_quit
 		},
 	}, true

@@ -13,3 +13,4 @@ devenv.local.yaml
 build*
 test-server*
 strawberry.code-workspace
+.odin-vendor*

@@ -29,7 +29,7 @@ main :: proc() {
 	assets.init()
 	defer assets.quit()
 
-	if !renderer.init() { log.fatal("Couldn't initialize renderer"); return }
+	if !renderer.init(&win) { log.fatal("Couldn't initialize renderer"); return }
 	defer renderer.free()
 
 	world.init()
