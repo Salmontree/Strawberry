@@ -9,7 +9,7 @@ state: struct {
 	vao, vbo, ebo: u32
 }
 
-init :: proc() {
+init :: proc() -> bool {
 	log.info("Initializing renderer")
 
 	vertices := [?]f32 {
@@ -23,6 +23,8 @@ init :: proc() {
 		0, 1, 3,
 		1, 2, 3,
 	}
+
+	if !assets.load(assets.Shader, "a", assets.get_path("resources/shaders/asdf.prog", context.temp_allocator)) do return false
 
 	gl.GenVertexArrays(1, &state.vao)
 	gl.GenBuffers(1, &state.vbo)
@@ -41,6 +43,8 @@ init :: proc() {
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 	gl.BindVertexArray(0)
+
+	return true
 }
 
 frame :: proc() {

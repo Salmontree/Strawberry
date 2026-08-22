@@ -1,6 +1,6 @@
 package main
 
-import "src:world/ecs"
+import "src:world"
 import "src:renderer"
 import "core:strings"
 import "core:os"
@@ -29,13 +29,11 @@ main :: proc() {
 	assets.init()
 	defer assets.quit()
 
-	renderer.init()
+	if !renderer.init() { log.fatal("Couldn't initialize renderer"); return }
 	defer renderer.free()
 
-	ecs.init()
-	defer ecs.deinit()
-
-	if !assets.load(assets.Shader, "a", assets.get_path("resources/shaders/asdf.prog", context.temp_allocator)) do log.error("nope")
+	world.init()
+	defer world.destroy()
 
 	for !win->should_quit() {
 		renderer.frame()
